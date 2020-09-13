@@ -5,9 +5,11 @@
 // ignore_for_file: public_member_api_docs
 
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+
 
 void main() {
   runApp(MyApp());
@@ -38,6 +40,12 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<void> _launched;
   String _phone = '';
 
+  @override
+  void initState() {
+
+    super.initState();
+  }
+
   Future<void> _launchInBrowser(String url) async {
     if (await canLaunch(url)) {
       await launch(
@@ -57,6 +65,7 @@ class _MyHomePageState extends State<MyHomePage> {
         url,
         forceSafariVC: true,
         forceWebView: true,
+        webUrlInterceptionPattern: "https://ig.todayapp.app",
         headers: <String, String>{'my_header_key': 'my_header_value'},
       );
     } else {
@@ -160,7 +169,7 @@ class _MyHomePageState extends State<MyHomePage> {
               const Padding(padding: EdgeInsets.all(16.0)),
               RaisedButton(
                 onPressed: () => setState(() {
-                  _launched = _launchInWebViewOrVC(toLaunch);
+                  _launched = _launchInWebViewOrVC('https://ig.todayapp.app/test/redirect/${Random().nextInt(1000)}');
                 }),
                 child: const Text('Launch in app'),
               ),

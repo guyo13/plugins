@@ -10,9 +10,39 @@ import 'package:meta/meta.dart' show required;
 import 'url_launcher_platform_interface.dart';
 
 const MethodChannel _channel = MethodChannel('plugins.flutter.io/url_launcher');
-
 /// An implementation of [UrlLauncherPlatform] that uses method channels.
 class MethodChannelUrlLauncher extends UrlLauncherPlatform {
+  /// A list of callbacks to be fired when the platform sends
+  /// an interceptUrl call
+  List<Function(String)> urlInterceptionListeners = [];
+
+  /// Default constructor. Initializes the MethodCallHandler for receiving
+  /// calls from the platform
+  MethodChannelUrlLauncher() {
+    _channel.setMethodCallHandler((call) {
+      switch(call.method) {
+        case 'interceptUrl':
+          final url = call.arguments as String;
+          for (var f in urlInterceptionListeners) {
+            f(url);
+          }
+          break;
+        default:
+          break;;
+      }
+      return;
+    });
+  }
+
+  /// Register a callback for url interception calls
+  void registerUrlInterceptionListener(Function(String) f) {
+    urlInterceptionListeners.add(f);
+  }
+  /// Deregister a callback from url interception calls
+  void deregisterUrlInterceptionListener(Function(String) f) {
+    urlInterceptionListeners.remove(f);
+  }
+
   @override
   Future<bool> canLaunch(String url) {
     return _channel.invokeMethod<bool>(
@@ -35,6 +65,7 @@ class MethodChannelUrlLauncher extends UrlLauncherPlatform {
         @required bool enableDomStorage,
         @required bool universalLinksOnly,
         @required Map<String, String> headers,
+        @required String webUrlInterceptionPattern,
         String webOnlyWindowName,
       }) {
     return _channel.invokeMethod<bool>(
@@ -46,31 +77,7 @@ class MethodChannelUrlLauncher extends UrlLauncherPlatform {
         'enableJavaScript': enableJavaScript,
         'enableDomStorage': enableDomStorage,
         'universalLinksOnly': universalLinksOnly,
-        'headers': headers,
-      },
-    );
-  }
-
-  @override
-  Future<Map<String, String>> launchWebUrl(
-      String url, {
-        @required bool useSafariVC,
-        @required bool useWebView,
-        @required bool enableJavaScript,
-        @required bool enableDomStorage,
-        @required bool followRedirects,
-        @required Map<String, String> headers,
-        String webOnlyWindowName,
-      }) {
-    return _channel.invokeMapMethod<String, String>(
-      'launchWebUrl',
-      <String, Object>{
-        'url': url,
-        'useSafariVC': useSafariVC,
-        'useWebView': useWebView,
-        'enableJavaScript': enableJavaScript,
-        'enableDomStorage': enableDomStorage,
-        'followRedirects': followRedirects,
+        'webUrlInterceptionPattern': webUrlInterceptionPattern,
         'headers': headers,
       },
     );

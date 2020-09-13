@@ -18,7 +18,9 @@ import java.util.Map;
 final class MethodCallHandlerImpl implements MethodCallHandler {
   private static final String TAG = "MethodCallHandlerImpl";
   private final UrlLauncher urlLauncher;
-  @Nullable private MethodChannel channel;
+  @Nullable protected MethodChannel channel;
+
+  public static String methodChannelName = "plugins.flutter.io/url_launcher";
 
   /** Forwards all incoming MethodChannel calls to the given {@code urlLauncher}. */
   MethodCallHandlerImpl(UrlLauncher urlLauncher) {
@@ -57,7 +59,7 @@ final class MethodCallHandlerImpl implements MethodCallHandler {
       stopListening();
     }
 
-    channel = new MethodChannel(messenger, "plugins.flutter.io/url_launcher");
+    channel = new MethodChannel(messenger, methodChannelName);
     channel.setMethodCallHandler(this);
   }
 
@@ -84,11 +86,12 @@ final class MethodCallHandlerImpl implements MethodCallHandler {
     final boolean useWebView = call.argument("useWebView");
     final boolean enableJavaScript = call.argument("enableJavaScript");
     final boolean enableDomStorage = call.argument("enableDomStorage");
+    final String webUrlInterceptionPattern = call.argument("webUrlInterceptionPattern");
     final Map<String, String> headersMap = call.argument("headers");
     final Bundle headersBundle = extractBundle(headersMap);
 
     LaunchStatus launchStatus =
-        urlLauncher.launch(url, headersBundle, useWebView, enableJavaScript, enableDomStorage);
+        urlLauncher.launch(url, headersBundle, useWebView, enableJavaScript, enableDomStorage, webUrlInterceptionPattern);
 
     if (launchStatus == LaunchStatus.NO_ACTIVITY) {
       result.error("NO_ACTIVITY", "Launching a URL requires a foreground activity.", null);

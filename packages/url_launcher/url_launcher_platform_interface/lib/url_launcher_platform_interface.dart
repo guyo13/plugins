@@ -55,6 +55,7 @@ abstract class UrlLauncherPlatform extends PlatformInterface {
     @required bool enableDomStorage,
     @required bool universalLinksOnly,
     @required Map<String, String> headers,
+    @required String webUrlInterceptionPattern,
     String webOnlyWindowName,
   }) {
     throw UnimplementedError('launch() has not been implemented.');
@@ -63,23 +64,5 @@ abstract class UrlLauncherPlatform extends PlatformInterface {
   /// Closes the WebView, if one was opened earlier by [launch].
   Future<void> closeWebView() {
     throw UnimplementedError('closeWebView() has not been implemented.');
-  }
-
-  /// A Method for launching web only urls and provides extended functionality
-  /// Returns a Map of <String, String> with key/value pairs representing the result of the request.
-  ///
-  /// For documentation on the other arguments, see the `launchWebUrl` documentation
-  /// in `package:url_launcher/url_launcher.dart`.
-  Future<Map<String, String>> launchWebUrl(
-      String url, {
-        @required bool useSafariVC,
-        @required bool useWebView,
-        @required bool enableJavaScript,
-        @required bool enableDomStorage,
-        @required bool followRedirects,
-        @required Map<String, String> headers,
-        String webOnlyWindowName,
-      }) {
-    throw UnimplementedError('launchWebUrl() has not been implemented.');
   }
 }

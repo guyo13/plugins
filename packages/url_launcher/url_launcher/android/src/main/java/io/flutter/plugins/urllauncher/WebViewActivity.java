@@ -8,11 +8,18 @@ import android.content.IntentFilter;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Browser;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+
+import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
+
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -24,6 +31,17 @@ public class WebViewActivity extends Activity {
    * that will request the current instance to finish.
    * */
   public static String ACTION_CLOSE = "close action";
+  public static String ACTION_INTERCEPT_URL = "intercept url action";
+  public static String INTERCEPTED_URL = "interceptedUrl";
+  private static String TAG = "WebViewActivity";
+
+  private String webUrlInterceptionPattern;
+  private final WebResourceResponse emptyWebResourceResponse = new WebResourceResponse("text/plain", "utf-8", new InputStream() {
+      @Override
+      public int read() throws IOException {
+          return 0;
+      }
+  });
 
   private final BroadcastReceiver broadcastReceiver =
       new BroadcastReceiver() {
@@ -39,7 +57,40 @@ public class WebViewActivity extends Activity {
   private final WebViewClient webViewClient =
       new WebViewClient() {
 
-        /*
+      private WebResourceResponse doInterceptUrl(String url, WebView view) {
+        Log.v(TAG, "webUrlInterceptionPattern (" + webUrlInterceptionPattern + ")");
+          if ((!webUrlInterceptionPattern.isEmpty()) &&
+                  url.contains(webUrlInterceptionPattern)) {
+            //FIXME - handle skipped frames, post to thread?
+            Log.d(TAG, "Intercepted URL " + url + " notifying Flutter");
+            final Intent intent = new Intent(ACTION_INTERCEPT_URL);
+            intent.putExtra(INTERCEPTED_URL, url);
+            sendBroadcast(intent);
+//            view.destroy();
+            finish();
+            return emptyWebResourceResponse;
+          }
+          return null;
+      }
+
+        @Nullable
+        @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
+        @Override
+        public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+          final String url = request.getUrl().toString();
+          Log.v(TAG, "Trying to invoke request: " + url);
+          return doInterceptUrl(url, view);
+        }
+
+          @Nullable
+          @SuppressWarnings("deprecation")
+          @Override
+          public WebResourceResponse shouldInterceptRequest(WebView view, String url) {
+              Log.v(TAG, "Trying to invoke request: " + url + " (via deprecated API)");
+              return doInterceptUrl(url, view);
+          }
+
+          /*
          * This method is deprecated in API 24. Still overridden to support
          * earlier Android versions.
          */
@@ -77,6 +128,8 @@ public class WebViewActivity extends Activity {
     final String url = intent.getStringExtra(URL_EXTRA);
     final boolean enableJavaScript = intent.getBooleanExtra(ENABLE_JS_EXTRA, false);
     final boolean enableDomStorage = intent.getBooleanExtra(ENABLE_DOM_EXTRA, false);
+    webUrlInterceptionPattern = intent.getStringExtra(WEB_URL_PATTERN);
+    webUrlInterceptionPattern = webUrlInterceptionPattern != null ? webUrlInterceptionPattern : "";
     final Bundle headersBundle = intent.getBundleExtra(Browser.EXTRA_HEADERS);
 
     final Map<String, String> headersMap = extractHeaders(headersBundle);
@@ -103,6 +156,7 @@ public class WebViewActivity extends Activity {
 
   @Override
   protected void onDestroy() {
+    Log.i(TAG, "onDestroy!");
     super.onDestroy();
     unregisterReceiver(broadcastReceiver);
   }
@@ -119,6 +173,7 @@ public class WebViewActivity extends Activity {
   private static String URL_EXTRA = "url";
   private static String ENABLE_JS_EXTRA = "enableJavaScript";
   private static String ENABLE_DOM_EXTRA = "enableDomStorage";
+  private static String WEB_URL_PATTERN = "webUrlInterceptionPattern";
 
   /* Hides the constants used to forward data to the Activity instance. */
   public static Intent createIntent(
@@ -126,11 +181,13 @@ public class WebViewActivity extends Activity {
       String url,
       boolean enableJavaScript,
       boolean enableDomStorage,
+      String webUrlInterceptionPattern,
       Bundle headersBundle) {
     return new Intent(context, WebViewActivity.class)
         .putExtra(URL_EXTRA, url)
         .putExtra(ENABLE_JS_EXTRA, enableJavaScript)
         .putExtra(ENABLE_DOM_EXTRA, enableDomStorage)
+        .putExtra(WEB_URL_PATTERN, webUrlInterceptionPattern)
         .putExtra(Browser.EXTRA_HEADERS, headersBundle);
   }
 }
