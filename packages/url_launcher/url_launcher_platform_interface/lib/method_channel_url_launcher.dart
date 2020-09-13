@@ -28,15 +28,15 @@ class MethodChannelUrlLauncher extends UrlLauncherPlatform {
 
   @override
   Future<bool> launch(
-    String url, {
-    @required bool useSafariVC,
-    @required bool useWebView,
-    @required bool enableJavaScript,
-    @required bool enableDomStorage,
-    @required bool universalLinksOnly,
-    @required Map<String, String> headers,
-    String webOnlyWindowName,
-  }) {
+      String url, {
+        @required bool useSafariVC,
+        @required bool useWebView,
+        @required bool enableJavaScript,
+        @required bool enableDomStorage,
+        @required bool universalLinksOnly,
+        @required Map<String, String> headers,
+        String webOnlyWindowName,
+      }) {
     return _channel.invokeMethod<bool>(
       'launch',
       <String, Object>{
@@ -46,6 +46,31 @@ class MethodChannelUrlLauncher extends UrlLauncherPlatform {
         'enableJavaScript': enableJavaScript,
         'enableDomStorage': enableDomStorage,
         'universalLinksOnly': universalLinksOnly,
+        'headers': headers,
+      },
+    );
+  }
+
+  @override
+  Future<Map<String, String>> launchWebUrl(
+      String url, {
+        @required bool useSafariVC,
+        @required bool useWebView,
+        @required bool enableJavaScript,
+        @required bool enableDomStorage,
+        @required bool followRedirects,
+        @required Map<String, String> headers,
+        String webOnlyWindowName,
+      }) {
+    return _channel.invokeMapMethod<String, String>(
+      'launchWebUrl',
+      <String, Object>{
+        'url': url,
+        'useSafariVC': useSafariVC,
+        'useWebView': useWebView,
+        'enableJavaScript': enableJavaScript,
+        'enableDomStorage': enableDomStorage,
+        'followRedirects': followRedirects,
         'headers': headers,
       },
     );

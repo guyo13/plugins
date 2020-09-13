@@ -130,3 +130,90 @@ Future<bool> canLaunch(String urlString) async {
 Future<void> closeWebView() async {
   return await UrlLauncherPlatform.instance.closeWebView();
 }
+
+/// A class representing the result of a launchUrl operation
+class LaunchUrlResult {
+  /// Specifies whether the Url was successfully opened
+  final bool successful;
+
+  /// If the web server answers with response status code 30x,
+  /// Contains a non-null String corresponding to the Location sent by the server
+  final String redirectUrl;
+
+  /// The status code returned by the server
+  final int statusCode;
+
+  /// Public constructor for creating a LaunchUrlResult
+  LaunchUrlResult(
+      {this.successful = false, this.redirectUrl, this.statusCode}) {
+    if (statusCode == null) {
+      throw Exception('statusCode must not be null!');
+    }
+    if (successful == null) {
+      throw Exception('successful must not be null!');
+    }
+  }
+}
+
+/// A method for launching web only Urls
+/// Supports enhanced functionality for handling server responses
+///
+/// [followRedirects] defaults to true, controls whether redirections should be followed
+///
+/// The other arguments are the same as in [launch]
+Future<LaunchUrlResult> launchWebUrl(
+  String urlString, {
+  bool forceSafariVC,
+  bool forceWebView,
+  bool enableJavaScript,
+  bool enableDomStorage,
+  bool followRedirects,
+  Map<String, String> headers,
+  Brightness statusBarBrightness,
+  String webOnlyWindowName,
+}) async {
+  assert(urlString != null);
+  final Uri url = Uri.parse(urlString.trimLeft());
+  final bool isWebURL = url.scheme == 'http' || url.scheme == 'https';
+  if (!isWebURL) {
+    throw PlatformException(
+        code: 'NOT_A_WEB_SCHEME',
+        message: 'To launch a web URL, you need to pass'
+            'in a web URL. This $urlString is not a web URL.');
+  }
+
+  /// [true] so that ui is automatically computed if [statusBarBrightness] is set.
+  bool previousAutomaticSystemUiAdjustment = true;
+  if (statusBarBrightness != null &&
+      defaultTargetPlatform == TargetPlatform.iOS) {
+    previousAutomaticSystemUiAdjustment =
+        WidgetsBinding.instance.renderView.automaticSystemUiAdjustment;
+    WidgetsBinding.instance.renderView.automaticSystemUiAdjustment = false;
+    SystemChrome.setSystemUIOverlayStyle(statusBarBrightness == Brightness.light
+        ? SystemUiOverlayStyle.dark
+        : SystemUiOverlayStyle.light);
+  }
+  final Map<String, String> result =
+      await UrlLauncherPlatform.instance.launchWebUrl(
+    urlString,
+    useSafariVC: forceSafariVC ?? isWebURL,
+    useWebView: forceWebView ?? false,
+    enableJavaScript: enableJavaScript ?? false,
+    enableDomStorage: enableDomStorage ?? false,
+    followRedirects: followRedirects ?? true,
+    headers: headers ?? <String, String>{},
+    webOnlyWindowName: webOnlyWindowName,
+  );
+  final _statusCode =
+      result.containsKey('statusCode') ? int.parse(result['statusCode']) : -1;
+  final launchUrlResult = LaunchUrlResult(
+      redirectUrl: result['redirectUrl'],
+      statusCode: _statusCode,
+      successful: _statusCode < 400 && _statusCode >= 100);
+  assert(previousAutomaticSystemUiAdjustment != null);
+  if (statusBarBrightness != null) {
+    WidgetsBinding.instance.renderView.automaticSystemUiAdjustment =
+        previousAutomaticSystemUiAdjustment;
+  }
+  return launchUrlResult;
+}
