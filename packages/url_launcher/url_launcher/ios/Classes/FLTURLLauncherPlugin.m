@@ -60,20 +60,24 @@ API_AVAILABLE(ios(9.0))
 
 @property(copy, nonatomic) FlutterResult flutterResult;
 @property(strong, nonatomic) NSURL *url;
+@property(strong, nonatomic) NSString *interceptUrlPattern;
 //@property(strong, nonatomic) SFSafariViewController *safari;
 @property(strong, nonatomic) WKWebView *wkWebView;
+@property(strong, nonatomic) FlutterMethodChannel *channel;
 @property(nonatomic, copy) void (^didFinish)(void);
 
 @end
 
 @implementation FLTURLLaunchSession
 
-- (instancetype)initWithUrl:url withFlutterResult:result {
+- (instancetype)initWithUrl:url withFlutterResult:result interceptUrl: pattern methodChannel: channel{
     NSLog(@"FLTURLLaunchSession-initWithUrl");
   self = [super init];
   if (self) {
-    self.url = url;
-    self.flutterResult = result;
+      self.url = url;
+      self.flutterResult = result;
+      self.interceptUrlPattern = pattern;
+      self.channel = channel;
     if (@available(iOS 9.0, *)) {
         CGRect screenRect = [UIScreen mainScreen].bounds;
         self.wkWebView = [[WKWebView alloc] initWithFrame:screenRect];
@@ -85,9 +89,35 @@ API_AVAILABLE(ios(9.0))
   }
   return self;
 }
+- (void)webView:(WKWebView *)webView decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler API_AVAILABLE(ios(9.0)) {
+    NSLog(@"FLTURLLaunchSession-decidePolicyForNavigationAction");
+    if (self.interceptUrlPattern != nil &&
+        self.interceptUrlPattern.length > 0) {
+        if (navigationAction.request.URL != nil &&
+            [navigationAction.request.URL.absoluteString containsString:self.interceptUrlPattern]) {
+            NSLog(@"FLTURLLaunchSession-decidePolicyForNavigationAction - Intercepting %@ ", self.interceptUrlPattern);
+            decisionHandler(WKNavigationActionPolicyCancel);
+            //TODO - call method channel
+            if(self.channel != nil) {
+                NSLog(@"FLTURLLaunchSession-decidePolicyForNavigationAction - calling method channel");
+                [self.channel invokeMethod:@"interceptUrl" arguments:navigationAction.request.URL.absoluteString];
+                [self close];
+            }
+        }
+        else {
+            NSLog(@"FLTURLLaunchSession-decidePolicyForNavigationAction - Allowing %@ ", self.interceptUrlPattern);
+            decisionHandler(WKNavigationActionPolicyAllow);
+        }
+    }
+    else {
+        //TODO - allow
+        NSLog(@"FLTURLLaunchSession-decidePolicyForNavigationAction - no intercept URL found. Allowing %@ ", self.interceptUrlPattern);
+        decisionHandler(WKNavigationActionPolicyAllow);
+    }
+}
 
 - (void)webView:(WKWebView *)webView didFinishNavigation:(WKNavigation *)navigation API_AVAILABLE(ios(9.0)) {
-    //TODO - find out if its correct...
+    //This is begin called every time there is navigation!
     NSLog(@"FLTURLLaunchSession-didFinishNavigation");
     if (navigation != nil) {
     self.flutterResult(nil);
@@ -108,17 +138,18 @@ API_AVAILABLE(ios(9.0))
 
 - (void)webViewDidClose:(WKWebView *)webView API_AVAILABLE(ios(9.0)) {
     NSLog(@"FLTURLLaunchSession-webViewDidClose");
-  self.didFinish();
+    [self close];
 }
 
 - (void)webViewWebContentProcessDidTerminate:(WKWebView *)webView API_AVAILABLE(ios(9.0)) {
     NSLog(@"FLTURLLaunchSession-webViewWebContentProcessDidTerminate");
-    self.didFinish();
+    [self close];
 }
 
 - (void)close {
     NSLog(@"FLTURLLaunchSession-close");
-  [self webViewDidClose:self.wkWebView];
+    self.channel = nil;
+    self.didFinish();
 }
 
 @end
@@ -133,6 +164,7 @@ API_AVAILABLE(ios(9.0))
 @interface FLTURLLauncherPlugin ()
 
 @property(strong, nonatomic) FLTURLLaunchSession *currentSession;
+@property(strong, nonatomic) FlutterMethodChannel *channel;
 
 @end
 
@@ -144,19 +176,21 @@ API_AVAILABLE(ios(9.0))
       [FlutterMethodChannel methodChannelWithName:@"plugins.flutter.io/url_launcher"
                                   binaryMessenger:registrar.messenger];
   FLTURLLauncherPlugin *plugin = [[FLTURLLauncherPlugin alloc] init];
+    plugin.channel = channel;
   [registrar addMethodCallDelegate:plugin channel:channel];
 }
 
 - (void)handleMethodCall:(FlutterMethodCall *)call result:(FlutterResult)result {
     NSLog(@"FLTURLLauncherPlugin-handleMethodCall");
   NSString *url = call.arguments[@"url"];
+  NSString *interceptUrl = call.arguments[@"webUrlInterceptionPattern"];
   if ([@"canLaunch" isEqualToString:call.method]) {
     result(@([self canLaunchURL:url]));
   } else if ([@"launch" isEqualToString:call.method]) {
     NSNumber *useSafariVC = call.arguments[@"useSafariVC"];
     if (useSafariVC.boolValue) {
       if (@available(iOS 9.0, *)) {
-          [self launchURLInVC:url result:result];
+          [self launchURLInVC:url result:result interceptUrl:interceptUrl];
       } else {
         [self launchURL:url call:call result:result];
       }
@@ -208,13 +242,18 @@ API_AVAILABLE(ios(9.0))
   }
 }
 
-- (void)launchURLInVC:(NSString *)urlString result:(FlutterResult)result API_AVAILABLE(ios(9.0)) {
+- (void)launchURLInVC:(NSString *)urlString result:(FlutterResult)result interceptUrl:(NSString *)interceptUrl API_AVAILABLE(ios(9.0)) {
     NSLog(@"FLTURLLauncherPlugin-launchURLInVC");
   NSURL *url = [NSURL URLWithString:urlString];
-  self.currentSession = [[FLTURLLaunchSession alloc] initWithUrl:url withFlutterResult:result];
+    self.currentSession = [[FLTURLLaunchSession alloc] initWithUrl:url
+                                                 withFlutterResult:result
+                                                interceptUrl:interceptUrl
+                                                     methodChannel:self.channel
+                           ];
   __weak typeof(self) weakSelf = self;
   self.currentSession.didFinish = ^(void) {
     weakSelf.currentSession = nil;
+    weakSelf.channel = nil;
   };
     [self.topViewController.view addSubview:self.currentSession.wkWebView];
 }
