@@ -56,6 +56,8 @@ class UrlLauncher {
       boolean useWebView,
       boolean enableJavaScript,
       boolean enableDomStorage,
+      boolean interceptStartsWith,
+      boolean interceptContains,
       String webUrlInterceptionPattern) {
     if (activity == null) {
       return LaunchStatus.NO_ACTIVITY;
@@ -65,7 +67,7 @@ class UrlLauncher {
     if (useWebView) {
       launchIntent =
           WebViewActivity.createIntent(
-              activity, url, enableJavaScript, enableDomStorage, webUrlInterceptionPattern, headersBundle);
+              activity, url, enableJavaScript, enableDomStorage, interceptStartsWith, interceptContains, webUrlInterceptionPattern, headersBundle);
     } else {
       launchIntent =
           new Intent(Intent.ACTION_VIEW)

@@ -36,6 +36,7 @@ public class WebViewActivity extends Activity {
   private static String TAG = "WebViewActivity";
 
   private String webUrlInterceptionPattern;
+  private InterceptionType interceptionType = InterceptionType.InterceptionTypeStartsWith;
   private final WebResourceResponse emptyWebResourceResponse = new WebResourceResponse("text/plain", "utf-8", new InputStream() {
       @Override
       public int read() throws IOException {
@@ -57,16 +58,31 @@ public class WebViewActivity extends Activity {
   private final WebViewClient webViewClient =
       new WebViewClient() {
 
+      private boolean needsInterception(String url) {
+        if (!webUrlInterceptionPattern.isEmpty()) {
+          switch (interceptionType) {
+            case InterceptionTypeContains:
+              return url.contains(webUrlInterceptionPattern);
+            case InterceptionTypeStartsWith:
+            default:
+              return url.startsWith(webUrlInterceptionPattern);
+          }
+        } else { return false; }
+      }
+
       private WebResourceResponse doInterceptUrl(String url, WebView view) {
-        Log.v(TAG, "webUrlInterceptionPattern (" + webUrlInterceptionPattern + ")");
-          if ((!webUrlInterceptionPattern.isEmpty()) &&
-                  url.contains(webUrlInterceptionPattern)) {
+          if (needsInterception(url)) {
             //FIXME - handle skipped frames, post to thread?
-            Log.d(TAG, "Intercepted URL " + url + " notifying Flutter");
+            Log.d(TAG, "Intercepted URL '" +
+                    url +
+                    "' with pattern '" +
+                    webUrlInterceptionPattern +
+                    "' and interception Type '" +
+                    interceptionType +
+                    "'notifying Flutter");
             final Intent intent = new Intent(ACTION_INTERCEPT_URL);
             intent.putExtra(INTERCEPTED_URL, url);
             sendBroadcast(intent);
-//            view.destroy();
             finish();
             return emptyWebResourceResponse;
           }
@@ -128,6 +144,10 @@ public class WebViewActivity extends Activity {
     final String url = intent.getStringExtra(URL_EXTRA);
     final boolean enableJavaScript = intent.getBooleanExtra(ENABLE_JS_EXTRA, false);
     final boolean enableDomStorage = intent.getBooleanExtra(ENABLE_DOM_EXTRA, false);
+    final String interceptType = intent.getStringExtra(INTERCEPT_TYPE);
+    if (interceptType != null && !interceptType.isEmpty()) {
+      interceptionType = InterceptionType.valueOf(interceptType);
+    }
     webUrlInterceptionPattern = intent.getStringExtra(WEB_URL_PATTERN);
     webUrlInterceptionPattern = webUrlInterceptionPattern != null ? webUrlInterceptionPattern : "";
     final Bundle headersBundle = intent.getBundleExtra(Browser.EXTRA_HEADERS);
@@ -174,6 +194,7 @@ public class WebViewActivity extends Activity {
   private static String ENABLE_JS_EXTRA = "enableJavaScript";
   private static String ENABLE_DOM_EXTRA = "enableDomStorage";
   private static String WEB_URL_PATTERN = "webUrlInterceptionPattern";
+  private static String INTERCEPT_TYPE = "interceptionType";
 
   /* Hides the constants used to forward data to the Activity instance. */
   public static Intent createIntent(
@@ -181,13 +202,25 @@ public class WebViewActivity extends Activity {
       String url,
       boolean enableJavaScript,
       boolean enableDomStorage,
+      boolean interceptStartsWith,
+      boolean interceptContains,
       String webUrlInterceptionPattern,
       Bundle headersBundle) {
+
+    InterceptionType interceptionType = InterceptionType.InterceptionTypeStartsWith;
+    if (interceptContains && interceptStartsWith) {
+      Log.w(TAG, "Both interceptContains and interceptStartsWith specified. Defaulting to interceptStartsWith");
+    } else if (interceptContains) {
+      interceptionType = InterceptionType.InterceptionTypeContains;
+    }
     return new Intent(context, WebViewActivity.class)
         .putExtra(URL_EXTRA, url)
         .putExtra(ENABLE_JS_EXTRA, enableJavaScript)
         .putExtra(ENABLE_DOM_EXTRA, enableDomStorage)
+        .putExtra(INTERCEPT_TYPE, interceptionType.name())
         .putExtra(WEB_URL_PATTERN, webUrlInterceptionPattern)
         .putExtra(Browser.EXTRA_HEADERS, headersBundle);
   }
+
+  public enum InterceptionType { InterceptionTypeStartsWith, InterceptionTypeContains};
 }
