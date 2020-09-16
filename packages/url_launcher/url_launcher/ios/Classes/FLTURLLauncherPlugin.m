@@ -55,6 +55,11 @@
 //
 //@end
 
+typedef NS_ENUM(NSInteger, InterceptionType) {
+    InterceptionTypeStartsWith,
+    InterceptionTypeContains,
+};
+
 API_AVAILABLE(ios(9.0))
 @interface FLTURLLaunchSession : NSObject <WKNavigationDelegate, WKUIDelegate>
 
@@ -62,6 +67,7 @@ API_AVAILABLE(ios(9.0))
 @property(strong, nonatomic) NSURL *url;
 @property(strong, nonatomic) NSString *interceptUrlPattern;
 @property(strong, nonatomic) WKWebView *wkWebView;
+@property InterceptionType interceptionType;
 @property(strong, nonatomic) FlutterMethodChannel *channel;
 @property(nonatomic, copy) void (^didFinish)(void);
 
@@ -99,25 +105,40 @@ API_AVAILABLE(ios(9.0))
 - (void)webView:(WKWebView *)webView decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler API_AVAILABLE(ios(9.0)) {
     NSLog(@"FLTURLLaunchSession-decidePolicyForNavigationAction");
     if (self.interceptUrlPattern != nil &&
-        self.interceptUrlPattern.length > 0) {
-        if (navigationAction.request.URL != nil &&
-            [navigationAction.request.URL.absoluteString containsString:self.interceptUrlPattern]) {
-            NSLog(@"FLTURLLaunchSession-decidePolicyForNavigationAction - Intercepting %@ ", self.interceptUrlPattern);
-            decisionHandler(WKNavigationActionPolicyCancel);
-            if(self.channel != nil) {
-                NSLog(@"FLTURLLaunchSession-decidePolicyForNavigationAction - calling method channel");
-                [self.channel invokeMethod:@"interceptUrl" arguments:navigationAction.request.URL.absoluteString];
+        self.interceptUrlPattern.length > 0 &&
+        navigationAction.request.URL != nil) {
+            switch (self.interceptionType) {
+                case InterceptionTypeContains:
+                    if ([navigationAction.request.URL.absoluteString containsString:self.interceptUrlPattern]) {
+                        NSLog(@"FLTURLLaunchSession-decidePolicyForNavigationAction - Intercepting URL '%@' with Pattern '%@' and interception type Contains", navigationAction.request.URL.absoluteString, self.interceptUrlPattern);
+                        decisionHandler(WKNavigationActionPolicyCancel);
+                        if(self.channel != nil) {
+                            NSLog(@"FLTURLLaunchSession-decidePolicyForNavigationAction - calling method channel");
+                            [self.channel invokeMethod:@"interceptUrl" arguments:navigationAction.request.URL.absoluteString];
+                        }
+                        [self close];
+                        return;
+                    }
+                    break;
+                case InterceptionTypeStartsWith:
+                default:
+                    if ([navigationAction.request.URL.absoluteString hasPrefix:self.interceptUrlPattern]) {
+                        NSLog(@"FLTURLLaunchSession-decidePolicyForNavigationAction - Intercepting URL '%@' with Pattern '%@' and interception type StartsWith", navigationAction.request.URL.absoluteString, self.interceptUrlPattern);
+                        decisionHandler(WKNavigationActionPolicyCancel);
+                        if(self.channel != nil) {
+                            NSLog(@"FLTURLLaunchSession-decidePolicyForNavigationAction - calling method channel");
+                            [self.channel invokeMethod:@"interceptUrl" arguments:navigationAction.request.URL.absoluteString];
+                        }
+                        [self close];
+                        return;
+                    }
+                    break;
             }
-            [self close];
-        }
-        else {
             NSLog(@"FLTURLLaunchSession-decidePolicyForNavigationAction - Allowing %@ ", navigationAction.request.URL.absoluteString);
             decisionHandler(WKNavigationActionPolicyAllow);
-        }
     }
     else {
-        //TODO - allow
-        NSLog(@"FLTURLLaunchSession-decidePolicyForNavigationAction - no intercept URL found. Allowing %@ ", self.interceptUrlPattern);
+        NSLog(@"FLTURLLaunchSession-decidePolicyForNavigationAction - no URL found. Allowing %@ ", self.interceptUrlPattern);
         decisionHandler(WKNavigationActionPolicyAllow);
     }
 }
@@ -195,13 +216,24 @@ API_AVAILABLE(ios(9.0))
     NSLog(@"FLTURLLauncherPlugin-handleMethodCall");
   NSString *url = call.arguments[@"url"];
   NSString *interceptUrl = call.arguments[@"webUrlInterceptionPattern"];
+    NSNumber *interceptStartsWith = call.arguments[@"interceptStartsWith"];
+    NSNumber *interceptContains = call.arguments[@"interceptContains"];
+    InterceptionType interceptionType;
+    if (interceptContains.boolValue && interceptStartsWith.boolValue) {
+        NSLog(@"Both interceptContains and interceptStartsWith specified. Defaulting to interceptStartsWith");
+        interceptionType = InterceptionTypeStartsWith;
+    } else if (interceptContains.boolValue) {
+        interceptionType = InterceptionTypeContains;
+    } else {
+        interceptionType = InterceptionTypeStartsWith;
+    }
   if ([@"canLaunch" isEqualToString:call.method]) {
     result(@([self canLaunchURL:url]));
   } else if ([@"launch" isEqualToString:call.method]) {
     NSNumber *useSafariVC = call.arguments[@"useSafariVC"];
     if (useSafariVC.boolValue) {
       if (@available(iOS 9.0, *)) {
-          [self launchURLInVC:url result:result interceptUrl:interceptUrl];
+          [self launchURLInVC:url result:result interceptUrl:interceptUrl interceptionType:interceptionType];
       } else {
         [self launchURL:url call:call result:result];
       }
@@ -253,12 +285,15 @@ API_AVAILABLE(ios(9.0))
   }
 }
 
-- (void)launchURLInVC:(NSString *)urlString result:(FlutterResult)result interceptUrl:(NSString *)interceptUrl API_AVAILABLE(ios(9.0)) {
+- (void)launchURLInVC:(NSString *)urlString result:(FlutterResult)result
+         interceptUrl:(NSString *)interceptUrl
+         interceptionType:(InterceptionType)interceptionType API_AVAILABLE(ios(9.0)) {
     NSLog(@"FLTURLLauncherPlugin-launchURLInVC");
   NSURL *url = [NSURL URLWithString:urlString];
     self.currentSession = [[FLTURLLaunchSession alloc] initSession];
     self.currentSession.url = url;
     self.currentSession.interceptUrlPattern = interceptUrl;
+    self.currentSession.interceptionType = interceptionType;
     self.currentSession.flutterResult = result;
     self.currentSession.channel = self.channel;
     //Reuse webview object
