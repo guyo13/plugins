@@ -10,6 +10,7 @@ import android.os.Bundle;
 import android.provider.Browser;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.View;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebView;
@@ -22,6 +23,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
+
+import io.flutter.plugins.urllauncher.databinding.WebViewLayoutBinding;
 
 /*  Launches WebView activity */
 public class WebViewActivity extends Activity {
@@ -133,12 +136,15 @@ public class WebViewActivity extends Activity {
   private WebView webview;
 
   private IntentFilter closeIntentFilter = new IntentFilter(ACTION_CLOSE);
+  private WebViewLayoutBinding binding;
 
   @Override
   public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
-    webview = new WebView(this);
-    setContentView(webview);
+    binding = WebViewLayoutBinding.inflate(getLayoutInflater());
+//    webview = new WebView(this);
+    webview = binding.webView;
+    setContentView(binding.getRoot());
     // Get the Intent that started this activity and extract the string
     final Intent intent = getIntent();
     final String url = intent.getStringExtra(URL_EXTRA);
@@ -163,6 +169,16 @@ public class WebViewActivity extends Activity {
 
     // Register receiver that may finish this Activity.
     registerReceiver(broadcastReceiver, closeIntentFilter);
+    binding.backButton.setOnClickListener(new View.OnClickListener() {
+      @Override
+      public void onClick(View v) {
+        if (webview.canGoBack()) {
+          webview.goBack();
+        } else {
+          finish();
+        }
+      }
+    });
   }
 
   private Map<String, String> extractHeaders(Bundle headersBundle) {

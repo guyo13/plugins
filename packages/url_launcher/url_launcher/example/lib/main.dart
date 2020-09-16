@@ -72,7 +72,7 @@ class _MyHomePageState extends State<MyHomePage> {
         forceSafariVC: true,
         forceWebView: true,
         interceptContains: true,
-        webUrlInterceptionPattern: "https://www.google.com/",
+        webUrlInterceptionPattern: "https://www.google.com/123",
         headers: <String, String>{'my_header_key': 'my_header_value'},
       );
     } else {
