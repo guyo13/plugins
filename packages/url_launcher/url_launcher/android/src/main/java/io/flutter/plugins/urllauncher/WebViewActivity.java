@@ -160,9 +160,9 @@ public class WebViewActivity extends AppCompatActivity {
     webUrlInterceptionPattern = webUrlInterceptionPattern != null ? webUrlInterceptionPattern : "";
 
     // Toolbar styling
-    final int toolbarColor = intent.getIntExtra(TOOLBAR_COLOR, 0xFF203090);
-    final int toolbarTitleColor = intent.getIntExtra(TOOLBAR_TITLE_COLOR, Color.WHITE);
-    final int toolbarBackButtonColor = intent.getIntExtra(TOOLBAR_BACK_BUTTON_COLOR, Color.WHITE);
+    final int toolbarColor = (int) intent.getLongExtra(TOOLBAR_COLOR, 0xFF203090);
+    final int toolbarTitleColor = (int) intent.getLongExtra(TOOLBAR_TITLE_COLOR, Color.WHITE);
+    final int toolbarBackButtonColor = (int) intent.getLongExtra(TOOLBAR_BACK_BUTTON_COLOR, Color.WHITE);
     String toolbarTitle = intent.getStringExtra(TOOLBAR_TITLE);
     toolbarTitle = toolbarTitle != null ? toolbarTitle : "URL Launcher";
 
@@ -249,9 +249,9 @@ public class WebViewActivity extends AppCompatActivity {
       boolean interceptContains,
       String webUrlInterceptionPattern,
       Bundle headersBundle,
-      Integer toolbarColor,
-      Integer toolbarTitleColor,
-      Integer toolbarBackButtonColor,
+      Long toolbarColor,
+      Long toolbarTitleColor,
+      Long toolbarBackButtonColor,
       String toolbarTitle) {
 
     InterceptionType interceptionType = InterceptionType.InterceptionTypeStartsWith;

@@ -5,6 +5,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:url_launcher_platform_interface/method_channel_url_launcher.dart';
@@ -109,6 +110,10 @@ Future<bool> launch(
     interceptContains: interceptContains ?? false,
     headers: headers ?? <String, String>{},
     webUrlInterceptionPattern: webUrlInterceptionPattern ?? '',
+    toolbarColor: toolbarColor,
+    toolbarTitleColor: toolbarTitleColor,
+    toolbarBackButtonColor: toolbarBackButtonColor,
+    toolbarTitle: toolbarTitle,
     webOnlyWindowName: webOnlyWindowName,
   );
   assert(previousAutomaticSystemUiAdjustment != null);

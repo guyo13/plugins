@@ -73,6 +73,10 @@ class _MyHomePageState extends State<MyHomePage> {
         forceWebView: true,
         interceptContains: true,
         webUrlInterceptionPattern: "https://www.google.com/123",
+        toolbarTitle: "URL Launcher Example!",
+        toolbarBackButtonColor: Colors.amber.value,
+        toolbarColor: Colors.deepPurple.value,
+        toolbarTitleColor: Colors.amberAccent.value,
         headers: <String, String>{'my_header_key': 'my_header_value'},
       );
     } else {

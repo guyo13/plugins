@@ -58,6 +58,10 @@ abstract class UrlLauncherPlatform extends PlatformInterface {
     @required bool interceptContains,
     @required Map<String, String> headers,
     @required String webUrlInterceptionPattern,
+    int toolbarColor,
+    int toolbarTitleColor,
+    int toolbarBackButtonColor,
+    String toolbarTitle,
     String webOnlyWindowName,
   }) {
     throw UnimplementedError('launch() has not been implemented.');

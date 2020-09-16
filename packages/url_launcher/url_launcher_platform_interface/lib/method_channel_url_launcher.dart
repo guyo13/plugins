@@ -68,6 +68,10 @@ class MethodChannelUrlLauncher extends UrlLauncherPlatform {
         @required bool interceptContains,
         @required Map<String, String> headers,
         @required String webUrlInterceptionPattern,
+        int toolbarColor,
+        int toolbarTitleColor,
+        int toolbarBackButtonColor,
+        String toolbarTitle,
         String webOnlyWindowName,
       }) {
     return _channel.invokeMethod<bool>(
@@ -83,6 +87,10 @@ class MethodChannelUrlLauncher extends UrlLauncherPlatform {
         'interceptContains': interceptContains,
         'webUrlInterceptionPattern': webUrlInterceptionPattern,
         'headers': headers,
+        'toolbarColor': toolbarColor,
+        'toolbarTitleColor': toolbarTitleColor,
+        'toolbarBackButtonColor': toolbarBackButtonColor,
+        'toolbarTitle': toolbarTitle,
       },
     );
   }

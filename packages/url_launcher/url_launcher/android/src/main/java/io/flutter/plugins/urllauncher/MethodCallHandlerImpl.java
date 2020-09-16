@@ -88,9 +88,10 @@ final class MethodCallHandlerImpl implements MethodCallHandler {
     final boolean enableDomStorage = call.argument("enableDomStorage");
     final boolean interceptStartsWith = call.argument("interceptStartsWith");
     final boolean interceptContains = call.argument("interceptContains");
-    final Integer toolbarColor = call.argument("toolbarColor");
-    final Integer toolbarTitleColor = call.argument("toolbarTitleColor");
-    final Integer toolbarBackButtonColor = call.argument("toolbarBackButtonColor");
+    //FIXME - method channel is encoding those values as long instead of int
+    final Long toolbarColor = call.argument("toolbarColor");
+    final Long toolbarTitleColor = call.argument("toolbarTitleColor");
+    final Long toolbarBackButtonColor = call.argument("toolbarBackButtonColor");
     final String toolbarTitle = call.argument("toolbarTitle");
     final String webUrlInterceptionPattern = call.argument("webUrlInterceptionPattern");
     final Map<String, String> headersMap = call.argument("headers");

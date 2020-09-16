@@ -59,9 +59,9 @@ class UrlLauncher {
       boolean interceptStartsWith,
       boolean interceptContains,
       String webUrlInterceptionPattern,
-      Integer toolbarColor,
-      Integer toolbarTitleColor,
-      Integer toolbarBackButtonColor,
+      Long toolbarColor,
+      Long toolbarTitleColor,
+      Long toolbarBackButtonColor,
       String toolbarTitle) {
     if (activity == null) {
       return LaunchStatus.NO_ACTIVITY;
