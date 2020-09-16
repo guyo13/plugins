@@ -1,10 +1,10 @@
 package io.flutter.plugins.urllauncher;
 
-import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Browser;
@@ -18,6 +18,9 @@ import android.webkit.WebViewClient;
 
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.AppCompatImageView;
+import androidx.appcompat.widget.Toolbar;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -27,7 +30,7 @@ import java.util.Map;
 import io.flutter.plugins.urllauncher.databinding.WebViewLayoutBinding;
 
 /*  Launches WebView activity */
-public class WebViewActivity extends Activity {
+public class WebViewActivity extends AppCompatActivity {
 
   /*
    * Use this to trigger a BroadcastReceiver inside WebViewActivity
@@ -142,23 +145,42 @@ public class WebViewActivity extends Activity {
   public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     binding = WebViewLayoutBinding.inflate(getLayoutInflater());
-//    webview = new WebView(this);
     webview = binding.webView;
-    setContentView(binding.getRoot());
     // Get the Intent that started this activity and extract the string
     final Intent intent = getIntent();
     final String url = intent.getStringExtra(URL_EXTRA);
     final boolean enableJavaScript = intent.getBooleanExtra(ENABLE_JS_EXTRA, false);
     final boolean enableDomStorage = intent.getBooleanExtra(ENABLE_DOM_EXTRA, false);
+    // Interception
     final String interceptType = intent.getStringExtra(INTERCEPT_TYPE);
     if (interceptType != null && !interceptType.isEmpty()) {
       interceptionType = InterceptionType.valueOf(interceptType);
     }
     webUrlInterceptionPattern = intent.getStringExtra(WEB_URL_PATTERN);
     webUrlInterceptionPattern = webUrlInterceptionPattern != null ? webUrlInterceptionPattern : "";
-    final Bundle headersBundle = intent.getBundleExtra(Browser.EXTRA_HEADERS);
 
+    // Toolbar styling
+    final int toolbarColor = intent.getIntExtra(TOOLBAR_COLOR, 0xFF203090);
+    final int toolbarTitleColor = intent.getIntExtra(TOOLBAR_TITLE_COLOR, Color.WHITE);
+    final int toolbarBackButtonColor = intent.getIntExtra(TOOLBAR_BACK_BUTTON_COLOR, Color.WHITE);
+    String toolbarTitle = intent.getStringExtra(TOOLBAR_TITLE);
+    toolbarTitle = toolbarTitle != null ? toolbarTitle : "URL Launcher";
+
+    // Headers
+    final Bundle headersBundle = intent.getBundleExtra(Browser.EXTRA_HEADERS);
     final Map<String, String> headersMap = extractHeaders(headersBundle);
+
+    //Load Title and view
+    binding.toolbar.setTitleTextColor(toolbarTitleColor);
+    binding.toolbar.setBackgroundColor(toolbarColor);
+    binding.title.setText(toolbarTitle);
+    binding.title.setTextColor(toolbarTitleColor);
+    binding.backButton.setColorFilter(toolbarBackButtonColor);
+    setSupportActionBar(binding.toolbar);
+    // Not using Toolbar internal title
+//    getSupportActionBar().setTitle(toolbarTitle);
+    setContentView(binding.getRoot());
+
     webview.loadUrl(url, headersMap);
 
     webview.getSettings().setJavaScriptEnabled(enableJavaScript);
@@ -169,6 +191,7 @@ public class WebViewActivity extends Activity {
 
     // Register receiver that may finish this Activity.
     registerReceiver(broadcastReceiver, closeIntentFilter);
+    // Back button
     binding.backButton.setOnClickListener(new View.OnClickListener() {
       @Override
       public void onClick(View v) {
@@ -211,6 +234,10 @@ public class WebViewActivity extends Activity {
   private static String ENABLE_DOM_EXTRA = "enableDomStorage";
   private static String WEB_URL_PATTERN = "webUrlInterceptionPattern";
   private static String INTERCEPT_TYPE = "interceptionType";
+  private static String TOOLBAR_COLOR = "toolbarColor";
+  private static String TOOLBAR_TITLE_COLOR = "toolbarTitleColor";
+  private static String TOOLBAR_BACK_BUTTON_COLOR = "toolbarBackButtonColor";
+  private static String TOOLBAR_TITLE = "toolbarTitle";
 
   /* Hides the constants used to forward data to the Activity instance. */
   public static Intent createIntent(
@@ -221,7 +248,11 @@ public class WebViewActivity extends Activity {
       boolean interceptStartsWith,
       boolean interceptContains,
       String webUrlInterceptionPattern,
-      Bundle headersBundle) {
+      Bundle headersBundle,
+      Integer toolbarColor,
+      Integer toolbarTitleColor,
+      Integer toolbarBackButtonColor,
+      String toolbarTitle) {
 
     InterceptionType interceptionType = InterceptionType.InterceptionTypeStartsWith;
     if (interceptContains && interceptStartsWith) {
@@ -235,6 +266,10 @@ public class WebViewActivity extends Activity {
         .putExtra(ENABLE_DOM_EXTRA, enableDomStorage)
         .putExtra(INTERCEPT_TYPE, interceptionType.name())
         .putExtra(WEB_URL_PATTERN, webUrlInterceptionPattern)
+        .putExtra(TOOLBAR_COLOR, toolbarColor)
+        .putExtra(TOOLBAR_TITLE_COLOR, toolbarTitleColor)
+        .putExtra(TOOLBAR_BACK_BUTTON_COLOR, toolbarBackButtonColor)
+        .putExtra(TOOLBAR_TITLE, toolbarTitle)
         .putExtra(Browser.EXTRA_HEADERS, headersBundle);
   }
 

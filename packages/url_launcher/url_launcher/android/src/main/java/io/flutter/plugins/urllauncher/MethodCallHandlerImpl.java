@@ -88,12 +88,17 @@ final class MethodCallHandlerImpl implements MethodCallHandler {
     final boolean enableDomStorage = call.argument("enableDomStorage");
     final boolean interceptStartsWith = call.argument("interceptStartsWith");
     final boolean interceptContains = call.argument("interceptContains");
+    final Integer toolbarColor = call.argument("toolbarColor");
+    final Integer toolbarTitleColor = call.argument("toolbarTitleColor");
+    final Integer toolbarBackButtonColor = call.argument("toolbarBackButtonColor");
+    final String toolbarTitle = call.argument("toolbarTitle");
     final String webUrlInterceptionPattern = call.argument("webUrlInterceptionPattern");
     final Map<String, String> headersMap = call.argument("headers");
     final Bundle headersBundle = extractBundle(headersMap);
 
     LaunchStatus launchStatus =
-        urlLauncher.launch(url, headersBundle, useWebView, enableJavaScript, enableDomStorage, interceptStartsWith, interceptContains, webUrlInterceptionPattern);
+        urlLauncher.launch(url, headersBundle, useWebView, enableJavaScript, enableDomStorage, interceptStartsWith, interceptContains, webUrlInterceptionPattern,
+                toolbarColor, toolbarTitleColor, toolbarBackButtonColor, toolbarTitle);
 
     if (launchStatus == LaunchStatus.NO_ACTIVITY) {
       result.error("NO_ACTIVITY", "Launching a URL requires a foreground activity.", null);

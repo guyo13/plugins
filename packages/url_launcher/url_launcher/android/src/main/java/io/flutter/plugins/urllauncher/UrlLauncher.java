@@ -58,7 +58,11 @@ class UrlLauncher {
       boolean enableDomStorage,
       boolean interceptStartsWith,
       boolean interceptContains,
-      String webUrlInterceptionPattern) {
+      String webUrlInterceptionPattern,
+      Integer toolbarColor,
+      Integer toolbarTitleColor,
+      Integer toolbarBackButtonColor,
+      String toolbarTitle) {
     if (activity == null) {
       return LaunchStatus.NO_ACTIVITY;
     }
@@ -67,7 +71,8 @@ class UrlLauncher {
     if (useWebView) {
       launchIntent =
           WebViewActivity.createIntent(
-              activity, url, enableJavaScript, enableDomStorage, interceptStartsWith, interceptContains, webUrlInterceptionPattern, headersBundle);
+              activity, url, enableJavaScript, enableDomStorage, interceptStartsWith, interceptContains, webUrlInterceptionPattern, headersBundle,
+                  toolbarColor, toolbarTitleColor, toolbarBackButtonColor, toolbarTitle);
     } else {
       launchIntent =
           new Intent(Intent.ACTION_VIEW)

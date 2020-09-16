@@ -16,9 +16,21 @@ xmlns:android="http://schemas.android.com/apk/res/android"
         android:theme="?attr/actionBarTheme"
         android:fitsSystemWindows="true"
         tools:background="#203090"
+        app:titleTextColor="@android:color/white"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent">
+
+        <TextView
+            android:id="@+id/title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:contentDescription="@string/title"
+            android:gravity="center"
+            tools:layout_editor_absoluteX="353dp"
+            tools:layout_editor_absoluteY="49dp"
+            tools:text="A very Long Title" />
+    </androidx.appcompat.widget.Toolbar>
 
     <WebView
         android:id="@+id/webView"
@@ -47,4 +59,5 @@ xmlns:android="http://schemas.android.com/apk/res/android"
         app:layout_constraintStart_toStartOf="@+id/toolbar"
         app:layout_constraintTop_toTopOf="@+id/toolbar"
         tools:ignore="UseAppTint" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

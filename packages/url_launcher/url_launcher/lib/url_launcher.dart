@@ -71,6 +71,10 @@ Future<bool> launch(
   Brightness statusBarBrightness,
   String webUrlInterceptionPattern,
   String webOnlyWindowName,
+  int toolbarColor,
+  int toolbarTitleColor,
+  int toolbarBackButtonColor,
+  String toolbarTitle
 }) async {
   assert(urlString != null);
   assert(!(interceptStartsWith && interceptContains));
