@@ -54,6 +54,8 @@ abstract class UrlLauncherPlatform extends PlatformInterface {
     @required bool enableJavaScript,
     @required bool enableDomStorage,
     @required bool universalLinksOnly,
+    @required bool interceptStartsWith,
+    @required bool interceptContains,
     @required Map<String, String> headers,
     @required String webUrlInterceptionPattern,
     String webOnlyWindowName,

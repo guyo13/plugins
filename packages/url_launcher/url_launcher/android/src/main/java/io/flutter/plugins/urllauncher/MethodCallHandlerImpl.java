@@ -86,6 +86,8 @@ final class MethodCallHandlerImpl implements MethodCallHandler {
     final boolean useWebView = call.argument("useWebView");
     final boolean enableJavaScript = call.argument("enableJavaScript");
     final boolean enableDomStorage = call.argument("enableDomStorage");
+    final boolean interceptStartsWith = call.arguments("interceptStartsWith");
+    final boolean interceptContains = call.arguments("interceptContains");
     final String webUrlInterceptionPattern = call.argument("webUrlInterceptionPattern");
     final Map<String, String> headersMap = call.argument("headers");
     final Bundle headersBundle = extractBundle(headersMap);

@@ -65,12 +65,15 @@ Future<bool> launch(
   bool enableJavaScript,
   bool enableDomStorage,
   bool universalLinksOnly,
+  bool interceptStartsWith=false,
+  bool interceptContains=false,
   Map<String, String> headers,
   Brightness statusBarBrightness,
   String webUrlInterceptionPattern,
   String webOnlyWindowName,
 }) async {
   assert(urlString != null);
+  assert(!(interceptStartsWith && interceptContains));
   final Uri url = Uri.parse(urlString.trimLeft());
   final bool isWebURL = url.scheme == 'http' || url.scheme == 'https';
   if ((forceSafariVC == true || forceWebView == true) && !isWebURL) {
@@ -98,6 +101,8 @@ Future<bool> launch(
     enableJavaScript: enableJavaScript ?? false,
     enableDomStorage: enableDomStorage ?? false,
     universalLinksOnly: universalLinksOnly ?? false,
+    interceptStartsWith: interceptStartsWith ?? webUrlInterceptionPattern != null ? true : false,
+    interceptContains: interceptContains ?? false,
     headers: headers ?? <String, String>{},
     webUrlInterceptionPattern: webUrlInterceptionPattern ?? '',
     webOnlyWindowName: webOnlyWindowName,

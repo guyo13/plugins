@@ -59,13 +59,19 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  Future<void> _launchInWebViewOrVC(String url) async {
+  Future<bool> _launchInWebViewOrVC(String url) async {
+    Function(String) callback;
+    callback = (url) {
+      print('Flutter intercepted $url');
+      deregisterUrlInterceptionListener(callback);
+    };
+    registerUrlInterceptionListener(callback);
     if (await canLaunch(url)) {
-      await launch(
+      return launch(
         url,
         forceSafariVC: true,
         forceWebView: true,
-        webUrlInterceptionPattern: "https://ig.todayapp.app",
+        webUrlInterceptionPattern: "https://www.google.com",
         headers: <String, String>{'my_header_key': 'my_header_value'},
       );
     } else {
@@ -169,7 +175,11 @@ class _MyHomePageState extends State<MyHomePage> {
               const Padding(padding: EdgeInsets.all(16.0)),
               RaisedButton(
                 onPressed: () => setState(() {
-                  _launched = _launchInWebViewOrVC('https://ig.todayapp.app/test/redirect/${Random().nextInt(1000)}');
+                  Future<bool> _launched = _launchInWebViewOrVC('https://www.google.com');
+                  _launched.then((bool value) {
+                    print(value);
+                  });
+                  // _launched = _launchInWebViewOrVC('https://www.google.com');
                 }),
                 child: const Text('Launch in app'),
               ),
