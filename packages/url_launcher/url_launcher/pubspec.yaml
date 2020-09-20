@@ -18,8 +18,6 @@ flutter:
         default_package: url_laucher_linux
       macos:
         default_package: url_laucher_macos
-  assets:
-    - images/back.png
 
 dependencies:
   flutter:
