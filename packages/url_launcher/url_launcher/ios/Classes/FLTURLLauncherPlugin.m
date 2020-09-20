@@ -60,8 +60,15 @@ typedef NS_ENUM(NSInteger, InterceptionType) {
     InterceptionTypeContains,
 };
 
+#define UIColorFromRGB(rgbValue) \
+[UIColor colorWithRed:((float)((rgbValue & 0xFF0000) >> 16))/255.0 \
+                green:((float)((rgbValue & 0x00FF00) >>  8))/255.0 \
+                 blue:((float)((rgbValue & 0x0000FF) >>  0))/255.0 \
+                alpha:1.0]
+#define APP_BAR_HEIGHT 40
+
 API_AVAILABLE(ios(9.0))
-@interface FLTURLLaunchSession : NSObject <WKNavigationDelegate, WKUIDelegate>
+@interface FLTURLLaunchSession : NSObject <WKNavigationDelegate, WKUIDelegate, UINavigationBarDelegate>
 
 @property(copy, nonatomic) FlutterResult flutterResult;
 @property(strong, nonatomic) NSURL *url;
@@ -75,14 +82,42 @@ API_AVAILABLE(ios(9.0))
 
 @implementation FLTURLLaunchSession
 
++ (CGFloat)getTopOffset API_AVAILABLE(ios(9.0)) {
+    if (@available(iOS 11.0, *)) {
+        UIEdgeInsets insets = UIApplication.sharedApplication.keyWindow.safeAreaInsets;
+        return insets.top;
+    } else {
+        NSLog(@"Defaulting to top offset 20");
+        return 20;
+    }
+}
+
++ (CGFloat)getBottomOffset API_AVAILABLE(ios(9.0)) {
+    if (@available(iOS 11.0, *)) {
+        UIEdgeInsets insets = UIApplication.sharedApplication.keyWindow.safeAreaInsets;
+        return insets.bottom;
+    } else {
+        NSLog(@"Defaulting bottom top offset 0");
+        return 0;
+    }
+}
+
 - (instancetype)initSession {
     NSLog(@"FLTURLLaunchSession-initSession");
   self = [super init];
   return self;
 }
 + (WKWebView *)createWkWebView API_AVAILABLE(ios(9.0)) {
+    CGFloat top = [FLTURLLaunchSession getTopOffset];
+    CGFloat bottom = [FLTURLLaunchSession getBottomOffset];
     CGRect screenRect = [UIScreen mainScreen].bounds;
-    WKWebView *webView = [[WKWebView alloc] initWithFrame:screenRect];
+    CGRect position = (CGRect){
+        .origin.x = 0,
+        .origin.y = APP_BAR_HEIGHT + top,
+        .size.width = screenRect.size.width,
+        .size.height = screenRect.size.height - APP_BAR_HEIGHT - top - bottom
+    };
+    WKWebView *webView = [[WKWebView alloc] initWithFrame:position];
     return webView;
 }
 + (NSString *)getTypeName:(InterceptionType)interceptionType {
@@ -180,12 +215,11 @@ API_AVAILABLE(ios(9.0))
     self.didFinish();
 }
 
+- (UIBarPosition)positionForBar:(id<UIBarPositioning>)bar {
+    return UIBarPositionBottom;
+}
+
 @end
-
-
-
-
-
 
 
 API_AVAILABLE(ios(9.0))
@@ -194,6 +228,7 @@ API_AVAILABLE(ios(9.0))
 @property(strong, nonatomic) FLTURLLaunchSession *currentSession;
 @property(strong, nonatomic) FlutterMethodChannel *channel;
 @property(strong, nonatomic) WKWebView *webView;
+@property(strong, nonatomic) UINavigationBar *myNav;
 
 @end
 
@@ -216,6 +251,10 @@ API_AVAILABLE(ios(9.0))
     NSNumber *interceptStartsWith = call.arguments[@"interceptStartsWith"];
     NSNumber *interceptContains = call.arguments[@"interceptContains"];
     InterceptionType interceptionType = InterceptionTypeStartsWith;
+    NSNumber *toolbarColor = call.arguments[@"toolbarColor"];
+    NSNumber *toolbarTitleColor = call.arguments[@"toolbarTitleColor"];
+    NSNumber *toolbarBackButtonColor = call.arguments[@"toolbarBackButtonColor"];
+    NSString *toolbarTitle = call.arguments[@"toolbarTitle"];
     if (interceptContains.boolValue && interceptStartsWith.boolValue) {
         NSLog(@"Both interceptContains and interceptStartsWith specified. Defaulting to interceptStartsWith");
     } else if (interceptContains.boolValue) {
@@ -227,7 +266,15 @@ API_AVAILABLE(ios(9.0))
     NSNumber *useSafariVC = call.arguments[@"useSafariVC"];
     if (useSafariVC.boolValue) {
       if (@available(iOS 9.0, *)) {
-          [self launchURLInVC:url result:result interceptUrl:interceptUrl interceptionType:interceptionType];
+          [self launchURLInVC:url
+                       result:result
+                       interceptUrl:interceptUrl
+                       interceptionType:interceptionType
+                       toolbarColor:toolbarColor
+                       toolbarTitleColor:toolbarTitleColor
+                       toolbarBackButtonColor:toolbarBackButtonColor
+                       toolbarTitle:toolbarTitle
+           ];
       } else {
         [self launchURL:url call:call result:result];
       }
@@ -281,7 +328,11 @@ API_AVAILABLE(ios(9.0))
 
 - (void)launchURLInVC:(NSString *)urlString result:(FlutterResult)result
          interceptUrl:(NSString *)interceptUrl
-         interceptionType:(InterceptionType)interceptionType API_AVAILABLE(ios(9.0)) {
+         interceptionType:(InterceptionType)interceptionType
+         toolbarColor:(NSNumber *)toolbarColor
+         toolbarTitleColor:(NSNumber *)toolbarTitleColor
+         toolbarBackButtonColor:(NSNumber *)toolbarBackButtonColor
+         toolbarTitle:(NSString *)toolbarTitle API_AVAILABLE(ios(9.0)) {
     NSLog(@"FLTURLLauncherPlugin-launchURLInVC");
   NSURL *url = [NSURL URLWithString:urlString];
     self.currentSession = [[FLTURLLaunchSession alloc] initSession];
@@ -303,8 +354,24 @@ API_AVAILABLE(ios(9.0))
       weakSelf.currentSession.wkWebView = nil;
     weakSelf.currentSession = nil;
   };
+
+    CGFloat topOffset = [FLTURLLaunchSession getTopOffset];
+    NSLog(@"Top offset %f", topOffset);
+    //Height isn't taken into account here just width
+    self.myNav = [[UINavigationBar alloc] initWithFrame:CGRectMake(0, topOffset, [UIScreen mainScreen].bounds.size.width, 0)];
+    [UINavigationBar appearance].barTintColor = UIColorFromRGB(toolbarColor.intValue);
+    self.myNav.delegate = self.currentSession;
+    self.myNav.titleTextAttributes = @{
+        NSForegroundColorAttributeName : UIColorFromRGB(toolbarTitleColor.intValue)
+    };
+    UINavigationItem *navigItem = [[UINavigationItem alloc] initWithTitle:toolbarTitle];
+    navigItem.backBarButtonItem.tintColor = UIColorFromRGB(toolbarBackButtonColor.intValue);
+    navigItem.hidesBackButton = false;
+    self.myNav.items = [NSArray arrayWithObjects: navigItem,nil];
+    
     [self.currentSession loadUrl];
     [self.topViewController.view addSubview:self.webView];
+    [self.topViewController.view addSubview:self.myNav];
 }
 
 - (void)closeWebViewWithResult:(FlutterResult)result API_AVAILABLE(ios(9.0)) {
