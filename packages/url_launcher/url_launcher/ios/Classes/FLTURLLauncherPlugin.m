@@ -68,7 +68,7 @@ typedef NS_ENUM(NSInteger, InterceptionType) {
 #define APP_BAR_HEIGHT 40
 
 API_AVAILABLE(ios(9.0))
-@interface FLTURLLaunchSession : NSObject <WKNavigationDelegate, WKUIDelegate, UINavigationBarDelegate>
+@interface FLTURLLaunchSession : NSObject <WKNavigationDelegate, WKUIDelegate>
 
 @property(copy, nonatomic) FlutterResult flutterResult;
 @property(strong, nonatomic) NSURL *url;
@@ -215,8 +215,12 @@ API_AVAILABLE(ios(9.0))
     self.didFinish();
 }
 
-- (UIBarPosition)positionForBar:(id<UIBarPositioning>)bar {
-    return UIBarPositionBottom;
+- (void)navigateBack {
+    if (self.wkWebView.canGoBack) {
+        [self.wkWebView goBack];
+    } else {
+        [self close];
+    }
 }
 
 @end
@@ -255,6 +259,9 @@ API_AVAILABLE(ios(9.0))
     NSNumber *toolbarTitleColor = call.arguments[@"toolbarTitleColor"];
     NSNumber *toolbarBackButtonColor = call.arguments[@"toolbarBackButtonColor"];
     NSString *toolbarTitle = call.arguments[@"toolbarTitle"];
+    if ([toolbarTitle isEqual:[NSNull null]]) {
+        toolbarTitle = @"";
+    }
     if (interceptContains.boolValue && interceptStartsWith.boolValue) {
         NSLog(@"Both interceptContains and interceptStartsWith specified. Defaulting to interceptStartsWith");
     } else if (interceptContains.boolValue) {
@@ -359,13 +366,28 @@ API_AVAILABLE(ios(9.0))
     NSLog(@"Top offset %f", topOffset);
     //Height isn't taken into account here just width
     self.myNav = [[UINavigationBar alloc] initWithFrame:CGRectMake(0, topOffset, [UIScreen mainScreen].bounds.size.width, 0)];
-    [UINavigationBar appearance].barTintColor = UIColorFromRGB(toolbarColor.intValue);
-    self.myNav.delegate = self.currentSession;
-    self.myNav.titleTextAttributes = @{
-        NSForegroundColorAttributeName : UIColorFromRGB(toolbarTitleColor.intValue)
-    };
+    if (![toolbarColor isEqual:[NSNull null]]) {
+        [UINavigationBar appearance].barTintColor = UIColorFromRGB(toolbarColor.intValue);
+    }
+    if (![toolbarTitleColor isEqual:[NSNull null]]) {
+        self.myNav.titleTextAttributes = @{
+            NSForegroundColorAttributeName : UIColorFromRGB(toolbarTitleColor.intValue)
+        };
+    }
     UINavigationItem *navigItem = [[UINavigationItem alloc] initWithTitle:toolbarTitle];
-    navigItem.backBarButtonItem.tintColor = UIColorFromRGB(toolbarBackButtonColor.intValue);
+    SEL selector = @selector(navigateBack);
+    UIImage *backBtn = [UIImage imageNamed:@"AssetBundle.bundle/back.png" ];
+//    NSLog(@"%@",[NSBundle mainBundle].bundlePath);
+    for (NSBundle *bundle in NSBundle.allBundles) {
+        NSLog(@"Bundle: %@", bundle.bundlePath);
+    }
+    navigItem.backBarButtonItem = [[UIBarButtonItem alloc] init];
+    navigItem.backBarButtonItem.image = backBtn;
+    navigItem.backBarButtonItem.target = self.currentSession;
+    navigItem.backBarButtonItem.action = selector;
+    if ( ![toolbarBackButtonColor isEqual:[NSNull null]]) {
+        navigItem.backBarButtonItem.tintColor = UIColorFromRGB(toolbarBackButtonColor.intValue);
+    }
     navigItem.hidesBackButton = false;
     self.myNav.items = [NSArray arrayWithObjects: navigItem,nil];
     
