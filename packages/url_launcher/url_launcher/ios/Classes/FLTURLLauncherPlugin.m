@@ -216,6 +216,7 @@ API_AVAILABLE(ios(9.0))
 }
 
 - (void)navigateBack {
+    NSLog(@"FLTURLLaunchSession-navigateBack");
     if (self.wkWebView.canGoBack) {
         [self.wkWebView goBack];
     } else {
@@ -233,10 +234,16 @@ API_AVAILABLE(ios(9.0))
 @property(strong, nonatomic) FlutterMethodChannel *channel;
 @property(strong, nonatomic) WKWebView *webView;
 @property(strong, nonatomic) UINavigationBar *myNav;
+@property(strong, nonatomic) UITextView *textView;
 
 @end
 
 @implementation FLTURLLauncherPlugin
+
+- (void)navigateBack {
+//    NSLog(@"Going back!");
+    [self.currentSession navigateBack];
+}
 
 + (void)registerWithRegistrar:(NSObject<FlutterPluginRegistrar> *)registrar {
     NSLog(@"FLTURLLauncherPlugin-registerWithRegistrar");
@@ -245,7 +252,7 @@ API_AVAILABLE(ios(9.0))
                                   binaryMessenger:registrar.messenger];
   FLTURLLauncherPlugin *plugin = [[FLTURLLauncherPlugin alloc] init];
     plugin.channel = channel;
-  [registrar addMethodCallDelegate:plugin channel:channel];
+    [registrar addMethodCallDelegate:plugin channel:channel];
 }
 
 - (void)handleMethodCall:(FlutterMethodCall *)call result:(FlutterResult)result {
@@ -357,13 +364,17 @@ API_AVAILABLE(ios(9.0))
     
   __weak typeof(self) weakSelf = self;
   self.currentSession.didFinish = ^(void) {
-     [weakSelf.webView removeFromSuperview];
+      [weakSelf.webView removeFromSuperview];
+      [weakSelf.myNav removeFromSuperview];
+      [weakSelf.textView removeFromSuperview];
       weakSelf.currentSession.wkWebView = nil;
-    weakSelf.currentSession = nil;
+      weakSelf.currentSession = nil;
+      weakSelf.myNav = nil;
+      weakSelf.textView = nil;
   };
 
+    //Navigation Bar
     CGFloat topOffset = [FLTURLLaunchSession getTopOffset];
-    NSLog(@"Top offset %f", topOffset);
     //Height isn't taken into account here just width
     self.myNav = [[UINavigationBar alloc] initWithFrame:CGRectMake(0, topOffset, [UIScreen mainScreen].bounds.size.width, 0)];
     if (![toolbarColor isEqual:[NSNull null]]) {
@@ -374,26 +385,27 @@ API_AVAILABLE(ios(9.0))
             NSForegroundColorAttributeName : UIColorFromRGB(toolbarTitleColor.intValue)
         };
     }
+    //Navigation Item
     UINavigationItem *navigItem = [[UINavigationItem alloc] initWithTitle:toolbarTitle];
-    SEL selector = @selector(navigateBack);
-    UIImage *backBtn = [UIImage imageNamed:@"AssetBundle.bundle/back.png" ];
-//    NSLog(@"%@",[NSBundle mainBundle].bundlePath);
-    for (NSBundle *bundle in NSBundle.allBundles) {
-        NSLog(@"Bundle: %@", bundle.bundlePath);
-    }
-    navigItem.backBarButtonItem = [[UIBarButtonItem alloc] init];
-    navigItem.backBarButtonItem.image = backBtn;
-    navigItem.backBarButtonItem.target = self.currentSession;
-    navigItem.backBarButtonItem.action = selector;
+    SEL select = @selector(navigateBack);
+    UITapGestureRecognizer *tapGesture =
+    [[UITapGestureRecognizer alloc] initWithTarget:self
+                                            action:select];
+    self.textView = [[UITextView alloc] initWithFrame:CGRectMake(6, topOffset+4, 47, 30) textContainer:nil];
+    self.textView.text = @"Back";
+    self.textView.font = [UIFont systemFontOfSize:16];
+    self.textView.backgroundColor = [UIColor clearColor];
+    [self.textView addGestureRecognizer:tapGesture];
     if ( ![toolbarBackButtonColor isEqual:[NSNull null]]) {
-        navigItem.backBarButtonItem.tintColor = UIColorFromRGB(toolbarBackButtonColor.intValue);
-    }
-    navigItem.hidesBackButton = false;
+            self.textView.textColor = UIColorFromRGB(toolbarBackButtonColor.intValue);
+        }
+    //Set Items
     self.myNav.items = [NSArray arrayWithObjects: navigItem,nil];
-    
+    //Load url and display views
     [self.currentSession loadUrl];
     [self.topViewController.view addSubview:self.webView];
     [self.topViewController.view addSubview:self.myNav];
+    [self.topViewController.view addSubview:self.textView];
 }
 
 - (void)closeWebViewWithResult:(FlutterResult)result API_AVAILABLE(ios(9.0)) {
